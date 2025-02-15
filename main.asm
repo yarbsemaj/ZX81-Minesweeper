@@ -15,7 +15,6 @@
 #include "libs/rom.asm"
 
 #define BOARD 			$6000   ;The board lives at 6000 hex
-#define MINES 			10   	;Number mines
 #define BOARD_W			16
 #define BOARD_H			16
 #define B_OFFSET_T		3
@@ -28,8 +27,57 @@
 
 
 #define SHOW_MINES		0
+#define FIRST_MOVE		1
 
 START:
+DRAW_TITLE_SCREEN:
+		LD		HL,(D_FILE)
+		PUSH	HL
+		LD		HL, TITLE_SCREEN
+		LD		(D_FILE), HL
+WAIT_TS	CALL 	KSCAN		; get a key from the keyboard
+		LD		B,H
+		LD		C,L
+		LD		D,C
+		INC		D
+		LD		A,01h					; If no key entered
+		JR		Z, WAIT_TS				; then loop
+		CALL	FINDCHAR				; Translate keyboard result to character
+		LD		A,(HL)					; Put results into reg a
+		CP		_E						; Move Cursor
+		JR 		Z, GAME_START_E			;
+		CP		_N						;
+		JR 		Z, GAME_START_N			;
+		CP		_H						;
+		JR 		Z, GAME_START_H			;
+		LD		BC,$1200				; Set pause to $1200
+DELAY_TS
+		DEC		BC						; Pause routine  - Probably need a debounce routine
+		LD		A,B
+		OR		C
+		JR		NZ,DELAY_TS
+		JP		WAIT_TS
+
+
+GAME_START_E
+		LD		A, 20
+		LD		(MINES),A
+		JR		GAME_START
+
+GAME_START_N
+		LD		A, 30
+		LD		(MINES),A
+		JR		GAME_START
+
+GAME_START_H
+		LD		A, 40
+		LD		(MINES),A
+		JR		GAME_START
+
+
+GAME_START:
+		POP		HL
+		LD		(D_FILE), HL
 		;RESET THE FLAGS
 		LD		HL,GAME_FLAGS
 		LD		(HL),0
@@ -136,7 +184,11 @@ REMOVE:
 		JR		NZ, INPUT_END
 		BIT		MINE_OFFSET,A						;Is this a game over
 		JP		NZ, GAME_OVER
-		
+CONTINUE_REMOVE
+		PUSH	HL
+		LD		HL, GAME_FLAGS						;Set Move as fist move
+		SET		FIRST_MOVE,(HL)
+		POP		HL
 		LD		BC, $00
 		PUSH	BC									;Set the stack terminator
 		PUSH	HL									;Add the Position to visit to the stack
@@ -297,6 +349,28 @@ END_REMOVE
 
 
 GAME_OVER
+		PUSH	HL								;If its our first move, move the mine
+		LD		HL,GAME_FLAGS
+		BIT		FIRST_MOVE,(HL)					;
+		POP		HL
+		JP		NZ,SHOW_GAME_OVER_MESSAGE		;Were saved
+		PUSH	HL								;Save HL for later
+REMOVE_LOOP
+		CALL	RAND				;Get a random number
+		LD		L,A					;Set the lower byte of the address to A, the upper byte will be $50, and the lower byte the offset
+		LD		A,(HL)				;Get the current value in that square
+		OR		A					;Is the Square blank
+		JR		NZ,ADD_MINES_LOOP	;If not try again
+		LD		(HL),$80			;Set the Mine bit (MSB)
+
+		POP		HL					;GEt back the origional mine position
+		RES		MINE_OFFSET,(HL)	;Remove the mine
+		JP		CONTINUE_REMOVE
+
+
+
+
+SHOW_GAME_OVER_MESSAGE
 		LD		HL, GAME_FLAGS
 		SET		SHOW_MINES,(HL)
 		CALL	DRAW_BOARD
@@ -352,7 +426,8 @@ INIT_BOARD_LOOP
 		INC		HL
 		DJNZ 	INIT_BOARD_LOOP
 									; We now have a blank board, lets add some mines
-		LD		B, MINES			;How many mines
+		LD		A,(MINES)
+		LD		B, A				;How many mines
 		LD		HL,BOARD			;Get the board
 ADD_MINES_LOOP
 		CALL	RAND				;Get a random number
@@ -380,9 +455,7 @@ COUNT_FLAG_RET
 		JR		Z, COUNT_HIDDEN
 COUNT_HIDDEN_RET
 		DJNZ	CALC_SCORE_LOOP							;Loop
-		LD		HL, NUMBER_OF_FLAGS
-		LD		(HL),D
-		LD		A,MINES
+		LD		A,(MINES)
 		CP		E
 		JP		Z,WIN									;You Win
 		PUSH	DE
@@ -390,7 +463,7 @@ COUNT_HIDDEN_RET
 		CALL 	PRINTAT
 		LD		HL,MINES_MESSAGE
 		CALL	PLINE
-		LD		A,MINES
+		LD		A,(MINES)
 		POP		DE
 		SUB		D
 		JR		C, TOO_MANY_FLAGS
@@ -563,12 +636,12 @@ PLINE	LD		A,(HL)		;load A with a character at HL
 		INC		HL			;increment HL to get to next character
 		JP		PLINE		;jump to beginning of loop
 
-CURSOR:
+CURSOR
 		.byte	0					;Cursor address
-GAME_FLAGS:
-		.byte	0					
-NUMBER_OF_FLAGS:
+GAME_FLAGS
 		.byte	0	
+MINES
+		.byte	0			
 
 GAME_OVER_MESSAGE:
 		.byte	_G,_A,_M,_E,$00,_O,_V,_E,_R,$76,$ff
@@ -585,6 +658,9 @@ MINES_MESSAGE
 ;
 #include "libs/rand.asm"
 #include "libs/bcd.asm"
+TITLE_SCREEN
+#include "title.txt"
+
 
 #include "libs/line1.asm"
 
