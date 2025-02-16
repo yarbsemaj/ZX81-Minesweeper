@@ -1,12 +1,4 @@
-;;
-;; TYPE.ASM
-;;   Print a key as it is touched on the keyboard
-;;   The program scans the keyboard and if a key is touched
-;;   it prints the character to the screen.  If the / character
-;;   is touched, the program exists to BASIC.
-;;
-
-; assemble with:  TASM -80 -b -s type.asm type.p
+; assemble with:  TASM -80 -b -s main.asm bin/mine.p
 
 #define AUTORUN line1
 #include "libs/sysvars.asm"
@@ -31,11 +23,11 @@
 
 START:
 DRAW_TITLE_SCREEN:
-		LD		HL,(D_FILE)
-		PUSH	HL
+		LD		HL,(D_FILE)				;Point the D_File address at the title screen		
+		PUSH	HL						;Save the old D_File Address
 		LD		HL, TITLE_SCREEN
 		LD		(D_FILE), HL
-WAIT_TS	CALL 	KSCAN		; get a key from the keyboard
+WAIT_TS	CALL 	KSCAN					; get a key from the keyboard
 		LD		B,H
 		LD		C,L
 		LD		D,C
@@ -44,7 +36,7 @@ WAIT_TS	CALL 	KSCAN		; get a key from the keyboard
 		JR		Z, WAIT_TS				; then loop
 		CALL	FINDCHAR				; Translate keyboard result to character
 		LD		A,(HL)					; Put results into reg a
-		CP		_E						; Move Cursor
+		CP		_E						;
 		JR 		Z, GAME_START_E			;
 		CP		_N						;
 		JR 		Z, GAME_START_N			;
@@ -58,7 +50,7 @@ DELAY_TS
 		JR		NZ,DELAY_TS
 		JP		WAIT_TS
 
-
+;Setup the number of mines
 GAME_START_E
 		LD		A, 20
 		LD		(MINES),A
@@ -76,10 +68,9 @@ GAME_START_H
 
 
 GAME_START:
-		POP		HL
+		POP		HL					;Restore the old D_FILE
 		LD		(D_FILE), HL
-		;RESET THE FLAGS
-		LD		HL,GAME_FLAGS
+		LD		HL,GAME_FLAGS		;RESET THE FLAGS
 		LD		(HL),0
 		CALL	INIT_RAND
 
@@ -90,7 +81,7 @@ GAME_START:
 		CALL	CALC_SCORE
 
 
-WAIT	CALL 	KSCAN		; get a key from the keyboard
+WAIT	CALL 	KSCAN					; get a key from the keyboard
 		LD		B,H
 		LD		C,L
 		LD		D,C
@@ -112,7 +103,7 @@ WAIT	CALL 	KSCAN		; get a key from the keyboard
 		CP		_R						;
 		JR		Z, REMOVE				;
 INPUT_END
-		CALL	CALC_SCORE
+		CALL	CALC_SCORE				; Before we get the next key, lets update the score
 		LD		BC,$1200				; Set pause to $1200
 DELAY	DEC		BC						; Pause routine  - Probably need a debounce routine
 		LD		A,B
@@ -204,7 +195,7 @@ REMOVE_RECURSIVE
 		;With all that out of the way, we can now compute the tiles new value
 		;For the top we can mask off the upper 4 bits and check that its Zero
 		LD		C,0									;Starts with zero bombs
-		LD		B,0									;Number of valid negbours
+		LD		B,0									;Number of valid neighbors
 		PUSH	HL									;Copy HL into DE
 		POP		DE									;
 COUNT_UP
@@ -216,7 +207,7 @@ COUNT_UP
 		LD		L,A									;Reconstruct HL
 		BIT		MINE_OFFSET,(HL)					;TT
 		JP		NZ, CUH
-		INC		B									;We have visited a negbour
+		INC		B									;We have visited a neighbor
 		PUSH	HL									;Push it to the stack
 TOP_LEFT
 		LD		A,E									;Are we at the very left
@@ -227,7 +218,7 @@ TOP_LEFT
 		LD		L,A									;Reconstruct HL
 		BIT		MINE_OFFSET, (HL)					;TL
 		JP		NZ, TLH
-		INC		B									;We have visited a negbour
+		INC		B									;We have visited a neighbor
 		PUSH	HL									;Push it to the stack
 TOP_RIGHT
 		LD		A,E									;Are we at the very right
@@ -239,7 +230,7 @@ TOP_RIGHT
 		LD		L,A									;Reconstruct HL
 		BIT		MINE_OFFSET,(HL)					;TR
 		JP		NZ, TRH
-		INC		B									;We have visited a negbour
+		INC		B									;We have visited a neighbor
 		PUSH	HL									;Push it to the stack
 COUNT_LEFT
 		LD		A,E									;Are we at the very left
@@ -250,7 +241,7 @@ COUNT_LEFT
 		LD		L,A									;Reconstruct HL
 		BIT		MINE_OFFSET,(HL)					;LL
 		JP		NZ, CLH
-		INC		B									;We have visited a negbour
+		INC		B									;We have visited a neighbor
 		PUSH	HL									;Push it to the stack
 COUNT_RIGHT
 		LD		A,E									;Are we at the very right
@@ -259,10 +250,10 @@ COUNT_RIGHT
 		JP		Z,COUNT_DOWN						;If its all set, then were at the very right
 		LD		A,E
 		INC		A									;Get the lower nibble of the byte
-		LD		L,A								;Reconstruct HL	
+		LD		L,A									;Reconstruct HL	
 		BIT		MINE_OFFSET,(HL)					;RR
 		JP		NZ, CRH
-		INC		B									;We have visited a negbour
+		INC		B									;We have visited a neighbor
 		PUSH	HL									;Push it to the stack
 COUNT_DOWN
 		LD		A,E									;Are we at the very bottom
@@ -272,7 +263,7 @@ COUNT_DOWN
 		LD		L,A									;Reconstruct HL
 		BIT		MINE_OFFSET,(HL)					;BB
 		JP		NZ, CDH
-		INC		B									;We have visited a negbour
+		INC		B									;We have visited a neighbor
 		PUSH	HL									;Push it to the stack
 BOTTOM_LEFT
 		LD		A,E									;Are we at the very left
@@ -283,25 +274,25 @@ BOTTOM_LEFT
 		LD		L,A									;Reconstruct HL			
 		BIT		MINE_OFFSET, (HL)	;BL
 		JP		NZ, BLH
-		INC		B									;We have visited a negbour
+		INC		B									;We have visited a neighbor
 		PUSH	HL									;Push it to the stack
 BOTTOM_RIGHT
 		LD		A,E									;Are we at the very right
 		AND		$0F									;Mask off the bottom nibble
 		CP		$0F									;Is the bottom nibble all set 
 		JP		Z,RECALC_CELL						;If its all set, then were at the very right	
-		LD		A,E									;Get Back our origional A
+		LD		A,E									;Get Back our OG A
 		ADD		A,BOARD_W+ 1						;Get the lower nibble of the byte
 		LD		L,A									;Reconstruct HL
 		BIT		MINE_OFFSET,(HL)					;BR
 		JP		NZ, BRH
-		INC		B									;We have visited a negbour
+		INC		B									;We have visited a neighbor
 		PUSH	HL									;Push it to the stack
 		JP		RECALC_CELL
 
 CUH
-		INC		C
-		JP		TOP_LEFT
+		INC		C									;Increment Mine Count
+		JP		TOP_LEFT							;Skip to the next check
 TLH
 		INC		C
 		JP		TOP_RIGHT
@@ -321,24 +312,24 @@ BLH
 		INC		C
 		JP		BOTTOM_RIGHT
 BRH
-		INC		C		
-													;Fall to recalc cell
+		INC		C									
+													;Let this check fall through to recal cell as its the last 
 RECALC_CELL
 		PUSH	DE
 		POP		HL
-		SET		VISABLE_OFFSET,(HL)					;MArk the cell as visable
+		SET		VISABLE_OFFSET,(HL)					;MArk the cell as visible
 		RES		FLAG_OFFSET,(HL)					;Unset The flag
 		LD		A,C									;Is C Zero
 		OR		A
-		JP		Z,REMOVE_RECURSIVE					;Lets visit the negbours
-													;else add the negbours to the lower nibble
+		JP		Z,REMOVE_RECURSIVE					;Lets visit the neighbors
+													;else add the neighbors to the lower nibble
 		OR		(HL)								;Combine C with HL
 		LD		(HL),A								;Put the result back
-		LD		A,B									;IS B 0; (the number of negbours weve pushed)
+		LD		A,B									;IS B 0; (the number of neighbors weve pushed)
 		OR		A
 		JP		Z,REMOVE_RECURSIVE					;If its 0, we can just the try next cell
-REMOVE_NEIGHBORS_FOR_STACK_LOOP
-		POP		HL
+REMOVE_NEIGHBORS_FOR_STACK_LOOP						;If its not 0, we don't want visit any neighbors
+		POP		HL									;So Remove them from the stack
 		DJNZ	REMOVE_NEIGHBORS_FOR_STACK_LOOP
 		JP		REMOVE_RECURSIVE
 
@@ -363,7 +354,7 @@ REMOVE_LOOP
 		JR		NZ,ADD_MINES_LOOP	;If not try again
 		LD		(HL),$80			;Set the Mine bit (MSB)
 
-		POP		HL					;GEt back the origional mine position
+		POP		HL					;GEt back the OG mine position
 		RES		MINE_OFFSET,(HL)	;Remove the mine
 		JP		CONTINUE_REMOVE
 
@@ -374,6 +365,7 @@ SHOW_GAME_OVER_MESSAGE
 		LD		HL, GAME_FLAGS
 		SET		SHOW_MINES,(HL)
 		CALL	DRAW_BOARD
+		CALL	CLEAR_TURORIAL
 		LD		BC,$0916
 		CALL 	PRINTAT
 		LD		HL,GAME_OVER_MESSAGE
@@ -448,18 +440,18 @@ CALC_SCORE_LOOP
 		LD		L,B										;Update lower nibble
 		LD		A,(HL)									;Get Board Value
 
-		BIT		FLAG_OFFSET,A
+		BIT		FLAG_OFFSET,A							;Count Flags and blank squares
 		JR		NZ, COUNT_FLAG
 COUNT_FLAG_RET
 		BIT		VISABLE_OFFSET,A
 		JR		Z, COUNT_HIDDEN
 COUNT_HIDDEN_RET
 		DJNZ	CALC_SCORE_LOOP							;Loop
-		LD		A,(MINES)
+		LD		A,(MINES)								;If the number of mines is the same as the blank squares, we have won
 		CP		E
 		JP		Z,WIN									;You Win
 		PUSH	DE
-		LD		BC,$0916
+		LD		BC,$0816								;Else print the difference between flags to the HUD
 		CALL 	PRINTAT
 		LD		HL,MINES_MESSAGE
 		CALL	PLINE
@@ -467,33 +459,33 @@ COUNT_HIDDEN_RET
 		POP		DE
 		SUB		D
 		JR		C, TOO_MANY_FLAGS
-		CALL	bin2bcd										;Work out the Number of mines left
+		CALL	bin2bcd										;Work out the Number of mines left, and covert to BCD
 		PUSH	AF
 		AND		$F0											;Mask off the top nibble
 		RRCA												;Move the top bits into the bottom
 		RRCA
 		RRCA
 		RRCA
-		ADD		A,_0
+		ADD		A,_0										;Convert to a char and print it
 		CALL	PRINT
 		POP		AF
-		AND		$0F
+		AND		$0F											;Do the same from the bottom nibble
 		ADD		A,_0
 		CALL	PRINT
 		RET
 
 TOO_MANY_FLAGS
-		LD		A,$17
+		LD		A,$17										;If we have more flags than mines, print **
 		CALL	PRINT
-		LD		A,$17
 		CALL	PRINT
 		RET
 
 WIN
-		POP		HL										;Remove the RET Address
+		POP		HL											;Remove the RET Address
 		LD		HL, GAME_FLAGS
 		SET		SHOW_MINES,(HL)
 		CALL	DRAW_BOARD
+		CALL	CLEAR_TURORIAL
 		LD		BC,$0916
 		CALL 	PRINTAT
 		LD		HL,WIN_MESSAGE
@@ -627,7 +619,70 @@ DRAW_BOTTOM
 		LD		(HL),$88							;Top of the board filled with grey
 		INC		HL									;Next char		
 		DJNZ	DRAW_BOTTOM							;Loop until were done
+;Draw Tutorial
+		LD		BC,$0C16
+		CALL 	PRINTAT
+		LD		HL,TUTORIAL_ONE
+		CALL	PLINE
+
+		LD		BC,$0D15
+		CALL 	PRINTAT
+		LD		HL,TUTORIAL_TWO
+		CALL	PLINE
+
+		LD		BC,$0F15
+		CALL 	PRINTAT
+		LD		HL,TUTORIAL_THREE
+		CALL	PLINE
+
+		LD		BC,$1015
+		CALL 	PRINTAT
+		LD		HL,TUTORIAL_FORE
+		CALL	PLINE
 		RET
+
+CLEAR_TURORIAL
+		LD		BC,$0816
+		CALL 	PRINTAT
+		LD		B,9
+		LD		A,0
+CLEAR_MINES_MESSAGE
+		CALL	PRINT
+		DJNZ	CLEAR_MINES_MESSAGE
+
+		LD		BC,$0C16
+		CALL 	PRINTAT
+		LD		B,7
+		LD		A,0
+CLEAR_TUTORIAL_ONE
+		CALL	PRINT
+		DJNZ	CLEAR_TUTORIAL_ONE
+
+		LD		BC,$0D15
+		CALL 	PRINTAT
+		LD		B,10
+		LD		A,0
+CLEAR_TUTORIAL_TWO
+		CALL	PRINT
+		DJNZ	CLEAR_TUTORIAL_TWO
+
+		LD		BC,$0F15
+		CALL 	PRINTAT
+		LD		B,9
+		LD		A,0
+CLEAR_TUTORIAL_THREE
+		CALL	PRINT
+		DJNZ	CLEAR_TUTORIAL_THREE
+
+		LD		BC,$1015
+		CALL 	PRINTAT
+		LD		B,6
+		LD		A,0
+CLEAR_TUTORIAL_FORE
+		CALL	PRINT
+		DJNZ	CLEAR_TUTORIAL_FORE
+		RET
+
 
 PLINE	LD		A,(HL)		;load A with a character at HL
 		CP		$FF			;is this $FF
@@ -643,16 +698,27 @@ GAME_FLAGS
 MINES
 		.byte	0			
 
-GAME_OVER_MESSAGE:
-		.byte	_G,_A,_M,_E,$00,_O,_V,_E,_R,$76,$ff
-WIN_MESSAGE:
-		.byte	_Y,_O,_U,$00,_W,_I,_N,$76,$ff
-PLAY_AGAIN_MESSAGE:
+GAME_OVER_MESSAGE
+		.byte	_G,_A,_M,_E,$00,_O,_V,_E,_R,$ff
+WIN_MESSAGE
+		.byte	_W,_E,_L,_L,$00,_D,_O,_N,_E,$ff
+PLAY_AGAIN_MESSAGE
 		.byte	$B5,_L,_A,_Y,$00,_A,_G,_A,_I,_N,$ff
-QUIT_MESSAGE:
+QUIT_MESSAGE
 		.byte	$B6,_U,_I,_T,$ff
 MINES_MESSAGE
-		.byte	_M,_I,_N,_E,_S,,$0E,$00,$ff
+		.byte	_M,_I,_N,_E,_S,$0E,$00,$ff
+
+TUTORIAL_ONE
+		.byte	$BC,$00,$00,_M,_O,_V,_E,$ff
+TUTORIAL_TWO
+		.byte	$A6,$B8,$A9,$00,_C,_U,_R,_S,_O,_R,$ff
+
+TUTORIAL_THREE
+		.byte	$AB,_L,_A,_G,$00,_M,_I,_N,_E,$ff
+
+TUTORIAL_FORE
+		.byte	$B7,_E,_V,_E,_A,_L,$ff
 
 ; the ordering of this file's includes is critical - don't change it.
 ;
