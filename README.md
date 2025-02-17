@@ -7,6 +7,9 @@ A simple Minesweeper game for the 16K ZX81.
 # Building
 `TASM -80 -b -s main.asm bin/mine.p`
 
+# Try it Out
+https://zx81.yarbsemaj.com/?id=mine
+
 # Acknowledgments
 Title screen font based on [Small Pixel by Dark MaxX](https://www.dafont.com/dark-maxx.d3080)
 
